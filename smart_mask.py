@@ -5,7 +5,7 @@ from adafruit_circuitplayground import cp
 from adafruit_ble import BLERadio
 from adafruit_ble.advertising.standard import ProvideServicesAdvertisement
 from adafruit_ble.services.nordic import UARTService
-
+#classe...
 class Breath:
     def __init__(self):
         self.breaths = 0
