@@ -1,14 +1,8 @@
 import smart_mask as sm
 import time
 from adafruit_circuitplayground import cp
+import led
 
-'''
-delay = 0.1
-
-while True:
-    smart_mask.breath_monitor_service(delay)
-
-'''
 
 
 
@@ -29,8 +23,8 @@ if state == INIT_STATE:
 
 
 
-recLed = sm.Led( ledPos = 9 , brightness = 0.05)
-fsmStateLed = sm.Led( ledPos = 5 , brightness = 0.05)
+recLed = led.Led( ledPos = 9 , brightness = 0.05)
+fsmStateLed = led.Led( ledPos = 5 , brightness = 0.05)
 logFinished = False
 forcedClosure = False
 
