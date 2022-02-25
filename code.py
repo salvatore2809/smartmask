@@ -4,8 +4,6 @@ from adafruit_circuitplayground import cp
 import led
 
 
-
-
 INIT_STATE = 0
 IDLE_STATE = 1
 ERROR_STATE = 2
@@ -65,5 +63,3 @@ while True:
             logFinished = False
             forcedClosure = False
             state = IDLE_STATE
-
-
