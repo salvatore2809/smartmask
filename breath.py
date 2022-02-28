@@ -91,6 +91,7 @@ class Breath:
         # Variance
         variance = sum(deviations) / n
         return variance
+
     def calculate_slope(self, new_value_gas):
 
         value_diff = new_value_gas - self.last_value_gas

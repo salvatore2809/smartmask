@@ -1,11 +1,13 @@
+import os
+import smart_mask
 class File:
 
     lastTimeFile = 0
-    samplesMax = 100 #save this number of rows in file, each time
+    samplesMax = 30 #save this number of rows in file, each time
     samples = 0
     fileName = ""
     filePath = ""
-    lineToWrite=""
+    file_buffer=""
     totalSamples = 0
     is_file_created = False
     rowMaxEachFile = 20000
@@ -38,25 +40,25 @@ class File:
                 return
         raise NameError('too much files in current directory')
 
-    def saveLineToWriteOnFile(self,forceEnd):
+    def savefile_bufferOnFile(self,forceEnd):
         #for excel
-        self.lineToWrite = self.lineToWrite.replace('.',',')
+        self.file_buffer = self.file_buffer.replace('.',',')
         with open(self.filePath, "a") as fp:
-            print(self.lineToWrite)
-            fp.write(self.lineToWrite)
+            print(self.file_buffer)
+            fp.write(self.file_buffer)
             fp.flush()
             fp.close()
         self.samples=0
-        self.lineToWrite=""
+        self.file_buffer=""
         if forceEnd or self.totalSamples >= self.rowMaxEachFile:
             self.is_file_created = False
             return True
         return False
 
-    def createLineTOWrite(self):
+    def createfile_buffer(self):
         for sensor in self.sensor_list:
-            self.lineToWrite += sensor.get_sensor_value_string()+';'
-        self.lineToWrite+="\n"
+            self.file_buffer += sensor.get_sensor_value_string()+';'
+        self.file_buffer+="\n"
         self.samples += 1
         self.totalSamples += 1
         return False
@@ -65,16 +67,15 @@ class File:
         if not self.is_file_created:
             self.createFile()
         if self.samples >= self.samplesMax or forceEnd or self.totalSamples >= self.rowMaxEachFile:
-            return self.saveLineToWriteOnFile(forceEnd)
-        elif time.monotonic() - self.lastTimeFile >= delaySec :
+            return self.savefile_bufferOnFile(forceEnd)
+        elif (time.monotonic() - self.lastTimeFile) >= delaySec :
             self.lastTimeFile = time.monotonic()
-            return self.createLineTOWrite()
+            return self.createfile_buffer()
 
     def logSensorsNoDelay(self, forceEnd):
         if not self.is_file_created:
             self.createFile()
         if self.samples >= self.samplesMax or forceEnd or self.totalSamples >= self.rowMaxEachFile:
-            return self.saveLineToWriteOnFile(forceEnd)
+            return self.savefile_bufferOnFile(forceEnd)
         else:
-            return self.createLineTOWrite()
-
+            return self.createfile_buffer()
