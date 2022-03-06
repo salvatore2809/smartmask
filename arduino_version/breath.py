@@ -1,7 +1,8 @@
 import time
 from adafruit_circuitplayground import cp
-
-
+'''
+to do list:
+'''
 class Breath:
     def __init__(self):
         self.breaths = 0
@@ -9,7 +10,8 @@ class Breath:
         self.avg_rpm = 0
 
         self.last_value_gas = 0
-        self.gas_noise = 0.3
+        self.gas_noise = 2000
+
         self.bufflen = 4
         self.slope_buffer = [0] * self.bufflen
         self.gas_buffer = [0] * 10
@@ -36,8 +38,9 @@ class Breath:
         #print(current_time)
         is_breath_detected = False
 
-        self.new_value_gas = self.smoother(gas_value)
-
+        #self.new_value_gas = self.smoother(gas_value)
+        self.new_value_gas = int(gas_value)
+        #print((self.new_value_gas,self.new_value_gas))
         self.slope = self.calculate_slope(self.new_value_gas)
         self.last_value_gas = self.new_value_gas
         self.update_led_status(self.slope, led_pos = 7)
@@ -48,13 +51,12 @@ class Breath:
             self.breath_period = current_time_event - self.last_time_event
             self.last_time_event = current_time_event
 
-            if self.bufflen == 4 and self.breath_period < 8 and self.breath_period > 1 and self.variance_gas_buffer > 0.4:
+            if self.bufflen == 4 and self.breath_period < 8 and self.breath_period > 1: #and self.variance_gas_buffer > 0.4:
                 self.rpm = self.calculate_rpm( self.breath_period )
                 self.breath_event_update()
                 is_breath_detected = True
-                #self.send_breath_report()
 
-            elif self.bufflen == 2 and self.breath_period < 3 and self.breath_period > 0.85 and self.variance_gas_buffer > 0.2:
+            elif self.bufflen == 2 and self.breath_period < 3 and self.breath_period > 0.85: #and self.variance_gas_buffer > 0.2:
                 self.rpm = self.calculate_rpm( self.breath_period )
                 self.breath_event_update()
                 is_breath_detected = True
@@ -63,8 +65,11 @@ class Breath:
                 if self.debug_mode:
                     print(" undetected variance: {0:.2f} breath period: {2:.2f}".format( self.variance_gas_buffer, self.breath_period))
 
+        #print(self.variance_gas_buffer)
+        #print(self.slope_buffer)
         self.update_gas_bufflen(last_wearing_status)
         self.update_slope_buffer()
+        self.update_gas_buffer(self.new_value_gas)
         self.variance_gas_buffer = self.calculate_variance(self.gas_buffer)
         self.debug()
         return is_breath_detected
@@ -74,6 +79,7 @@ class Breath:
         if self.bufflen is not None:
             #last 4 or 2 elements of slope_buffer
             buffer = slope_buffer[-self.bufflen:]
+            print(buffer)
             for i in range(self.bufflen/2):
                 if buffer[i] >= 0 and buffer[self.bufflen-1-i] < 0:
                     pass
@@ -95,7 +101,7 @@ class Breath:
     def calculate_slope(self, new_value_gas):
 
         value_diff = new_value_gas - self.last_value_gas
-
+        #print(value_diff)
         if value_diff != 0:
             if abs(value_diff) < self.gas_noise:
                 return 0
@@ -108,8 +114,9 @@ class Breath:
 
         cp.pixels.brightness = 0.1
 
-        if self.variance_gas_buffer > 0.4:
-            if slope > 0 :
+        #if self.variance_gas_buffer > 0.5:
+        if True:
+            if slope >= 0 :
                 cp.pixels[led_pos] = (0, 255, 0)
             elif slope <= 0 :
                 cp.pixels[led_pos] = (255, 0, 0)

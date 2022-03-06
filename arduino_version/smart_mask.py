@@ -9,6 +9,7 @@ import filemanager as fileman
 #
 class Smart_mask:
     temperature_offset = 0
+    last_value_gas=0
     last_wearing_status = False
     last_breath_monitor_time = time.monotonic()
 
@@ -27,6 +28,11 @@ class Smart_mask:
     all_sensor_list = [time_sensor,gas_sensor, in_mask_temp_sensor, in_mask_humidity_sensor, pressure_sensor,
                         altitude_sensor,microphone_sensor,light_sensor,on_board_temp_sensor,accelerometer_sensor]
     sensor_list=[]
+
+    accel_buff = [(0,0,0)] * 10
+    variance_buff =[0]*20
+    last_sum_xyz = 0
+    last_acc_event_time = 0
     def __init__(self, names_sensor_to_rec):
         '''
         i2c = board.I2C()  # uses board.SCL and board.SDA
@@ -62,18 +68,60 @@ class Smart_mask:
                 gas = sensor.get_sensor_value()
 
         if (current_time - self.last_breath_monitor_time) >= delay :
-
+        #if gas != self.last_value_gas:
+        #if (current_time - self.last_breath_monitor_time) >= delay :
             self.last_breath_monitor_time = current_time
-
+            self.last_value_gas = gas
             self.user_ble_interface.start_ble_connection()
-
-            print(gas)
+            #print(gas)
             #bug the execution stops at bme680.gas after sending ble message
-            if self.user_breath.is_breath_detected(gas, current_time, self.last_wearing_status):
-                self.user_ble_interface.send_breath_report( self.user_breath.breaths, self.user_breath.breath_period, self.user_breath.avg_rpm )
+            if self.is_mask_worn():
+                if self.user_breath.is_breath_detected(gas, current_time, self.last_wearing_status):
+                    self.user_ble_interface.send_breath_report( self.user_breath.breaths, self.user_breath.breath_period, self.user_breath.avg_rpm )
 
             self.update_wearing_status( current_time, self.user_breath.last_time_breath )
 
+
+    def is_mask_worn(self):
+        for sensor in self.sensor_list:
+            if sensor.sensor_name=="accelerometer_XYZ":
+                xyz = sensor.get_sensor_value()
+        #current_sum_xyz = abs(xyz.x) + abs(xyz.y) + abs(xyz.z)
+
+        #diff = current_sum_xyz - self.last_sum_xyz
+        #print(diff)
+        self.accel_buff.pop(0)
+        self.accel_buff.append((xyz.x, xyz.y, xyz.z))
+        variance_x = self.calculate_variance([a_tuple[0] for a_tuple in self.accel_buff])
+        variance_y = self.calculate_variance([a_tuple[1] for a_tuple in self.accel_buff])
+        variance_z = self.calculate_variance([a_tuple[2] for a_tuple in self.accel_buff])
+        self.variance_buff.pop(0)
+        self.variance_buff.append(sum([variance_x,variance_y,variance_z]))
+
+        if self.calculate_variance(self.variance_buff)*100000 > 100:
+            self.last_acc_event_time = self.last_breath_monitor_time
+        if (self.last_breath_monitor_time-self.last_acc_event_time) > 10:
+            return False
+        return True
+        #print(self.calculate_variance(self.variance_buff)*100000)
+        #print(sum([variance_x,variance_y,variance_z]))
+        #avg_variance_buff = sum(self.variance_buff)/20
+
+        #print(variance_accel)
+        #print(avg_variance_buff )
+        #return avg_variance_buff > 0.02
+        #self.last_sum_xyz = current_sum_xyz
+
+    def calculate_variance(self, data):
+        # Number of observations
+        n = len(data)
+        # Mean of the data
+        mean = sum(data) / n
+        # Square deviations
+        deviations = [(x - mean) ** 2 for x in data]
+        # Variance
+        variance = sum(deviations) / n
+        return variance
 
     def log_sensors_on_file(self, delay, forcedClosure):
         return self.recFile.logSensorsNoDelay(forcedClosure)
